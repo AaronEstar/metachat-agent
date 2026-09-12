@@ -1,127 +1,150 @@
 import json
 import os
+from datetime import datetime
+
 import requests
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
-base_url = os.getenv("LLM_BASE_URL")
-model = os.getenv("LLM_MODEL")
-api_key = os.getenv("LLM_API_KEY")
+BASE_URL = os.getenv("LLM_BASE_URL")
+MODEL = os.getenv("LLM_MODEL")
+API_KEY = os.getenv("LLM_API_KEY")
 
-if not base_url or not model or not api_key:
-    raise ValueError("请检查 .env 中的配置")
+if not BASE_URL:
+    raise ValueError("未配置 LLM_BASE_URL")
 
-url = f"{base_url.rstrip('/')}/v1/chat/completions"
+if not MODEL:
+    raise ValueError("未配置 LLM_MODEL")
+
+if not API_KEY:
+    raise ValueError("未配置 LLM_API_KEY")
+
+
+# 确保地址以 /v1/chat/completions 结尾
+if BASE_URL.endswith("/"):
+    BASE_URL = BASE_URL[:-1]
+
+if not BASE_URL.endswith("/v1/chat/completions"):
+    API_URL = BASE_URL + "/v1/chat/completions"
+else:
+    API_URL = BASE_URL
+
 
 headers = {
-    "Authorization": f"Bearer {api_key}",
+    "Authorization": f"Bearer {API_KEY}",
     "Content-Type": "application/json",
 }
 
-history_file = "chat_history.json"
 
-default_messages = [
+# 保存完整对话上下文
+messages = [
     {
         "role": "system",
-        "content": "你是一个有帮助的中文 AI 助手。",
+        "content": "你是一个友好、准确、有帮助的中文 AI 助手。",
     }
 ]
 
-
-def load_history():
-    if not os.path.exists(history_file):
-        return default_messages.copy()
-
-    try:
-        with open(history_file, "r", encoding="utf-8") as file:
-            messages = json.load(file)
-
-        if isinstance(messages, list) and messages:
-            return messages
-
-    except (json.JSONDecodeError, OSError):
-        print("聊天记录读取失败，将开始新的对话。")
-
-    return default_messages.copy()
+chat_history = []
 
 
-def save_history(messages):
-    try:
-        with open(history_file, "w", encoding="utf-8") as file:
-            json.dump(messages, file, ensure_ascii=False, indent=2)
-    except OSError as error:
-        print(f"聊天记录保存失败：{error}")
+def ask_ai():
+    """将完整上下文发送给 AI"""
 
-
-messages = load_history()
-
-print("聊天程序已启动。输入 exit 或 quit 退出。")
-print("输入 clear 清空当前聊天记录。")
-print("-" * 50)
-
-while True:
-    user_input = input("\n你：").strip()
-
-    if user_input.lower() in {"exit", "quit"}:
-        save_history(messages)
-        print("聊天记录已保存，聊天结束。")
-        break
-
-    if user_input.lower() == "clear":
-        messages = default_messages.copy()
-        save_history(messages)
-        print("当前聊天记录已清空。")
-        continue
-
-    if not user_input:
-        continue
-
-    messages.append({
-        "role": "user",
-        "content": user_input,
-    })
-
-    payload = {
-        "model": model,
+    data = {
+        "model": MODEL,
         "messages": messages,
         "temperature": 0.7,
     }
 
-    try:
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=120,
-        )
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json=data,
+        timeout=120,
+    )
 
-        if not response.ok:
-            print(f"\n请求失败（HTTP {response.status_code}）：")
-            print(response.text)
-            messages.pop()
+    response.raise_for_status()
+
+    result = response.json()
+    answer = result["choices"][0]["message"]["content"]
+
+    return answer
+
+
+def save_history():
+    """保存聊天记录"""
+
+    with open("chat_history.json", "w", encoding="utf-8") as file:
+        json.dump(chat_history, file, ensure_ascii=False, indent=2)
+
+
+print("MetaChat Agent 已启动")
+print("输入 exit 退出，输入 clear 清空当前对话")
+print("-" * 50)
+
+
+while True:
+    try:
+        user_input = input("你：").strip()
+
+        if not user_input:
             continue
 
-        result = response.json()
-        answer = result["choices"][0]["message"]["content"]
+        if user_input.lower() == "exit":
+            save_history()
+            print("聊天记录已保存，聊天结束。")
+            break
 
-        print(f"\nAI：{answer}")
+        if user_input.lower() == "clear":
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一个友好、准确、有帮助的中文 AI 助手。",
+                }
+            ]
+            print("当前对话上下文已清空。")
+            continue
 
+        # 添加用户消息
         messages.append({
-            "role": "assistant",
-            "content": answer,
+            "role": "user",
+            "content": user_input,
         })
 
-        save_history(messages)
+        try:
+            answer = ask_ai()
 
-    except requests.exceptions.Timeout:
-        print("\n请求超时。")
-        messages.pop()
+            # 添加 AI 回复，供下一轮使用
+            messages.append({
+                "role": "assistant",
+                "content": answer,
+            })
 
-    except requests.exceptions.RequestException as error:
-        print(f"\n网络请求失败：{error}")
-        messages.pop()
+            # 保存不包含 system 提示词的聊天记录
+            chat_history.append({
+                "time": datetime.now().isoformat(timespec="seconds"),
+                "user": user_input,
+                "assistant": answer,
+            })
 
-    except (ValueError, KeyError, IndexError) as error:
-        print(f"\n解析接口返回内容失败：{error}")
-        messages.pop()
+            print(f"\nAI：{answer}\n")
+
+        except requests.exceptions.Timeout:
+            # 请求失败时移除刚刚加入的用户消息
+            messages.pop()
+            print("请求超时，请检查网络后重试。\n")
+
+        except requests.exceptions.RequestException as error:
+            messages.pop()
+            print(f"API 请求失败：{error}\n")
+
+        except (KeyError, IndexError, TypeError, ValueError):
+            messages.pop()
+            print("API 返回格式异常，请检查模型接口配置。\n")
+
+    except KeyboardInterrupt:
+        save_history()
+        print("\n聊天记录已保存，聊天结束。")
+        break
