@@ -73,14 +73,49 @@ def ask_ai():
     return answer
 
 
-def save_history():
-    """保存聊天记录"""
+def show_history():
+    """显示本次运行中的聊天记录"""
+
+    if not chat_history:
+        print("当前还没有聊天记录。\n")
+        return
+
+    print("\n===== 聊天记录 =====")
+
+    for item in chat_history:
+        print(f"\n[{item['time']}]")
+        print(f"你：{item['user']}")
+        print(f"AI：{item['assistant']}")
+
+    print("\n====================\n")
+
+
+def show_help():
+    """显示可用命令"""
+
+    print("""
+可用命令：
+
+  help       查看帮助
+  history    查看本次聊天记录
+  model      查看当前使用的模型
+  clear      清空当前对话上下文
+  exit       保存记录并退出
+""")
+
+def show_model():
+    """显示当前模型和 API 地址"""
+
+    print(f"\n当前模型：{MODEL}")
+    print(f"API 地址：{API_URL}\n")
+
 
     with open("chat_history.json", "w", encoding="utf-8") as file:
         json.dump(chat_history, file, ensure_ascii=False, indent=2)
 
 
 print("MetaChat Agent 已启动")
+print("输入 help 查看命令")
 print("输入 exit 退出，输入 clear 清空当前对话")
 print("-" * 50)
 
@@ -92,22 +127,35 @@ while True:
         if not user_input:
             continue
 
-        if user_input.lower() == "exit":
+        command = user_input.lower()
+
+        if command == "exit":
             save_history()
             print("聊天记录已保存，聊天结束。")
             break
 
-        if user_input.lower() == "clear":
+        if command == "help":
+            show_help()
+            continue
+
+        if command == "history":
+            show_history()
+            continue
+
+        if command == "model":
+            show_model()
+            continue
+
+        if command == "clear":
             messages = [
                 {
                     "role": "system",
-                    "content": "你是一个友好、准确、有帮助的中文 AI 助手。",
+                    "content": "你是一个友好、准确、有帮助的中文 AI 助手",
                 }
             ]
-            print("当前对话上下文已清空。")
+            print("当前对话上下文已清空。\n")
             continue
 
-        # 添加用户消息
         messages.append({
             "role": "user",
             "content": user_input,
@@ -116,13 +164,11 @@ while True:
         try:
             answer = ask_ai()
 
-            # 添加 AI 回复，供下一轮使用
             messages.append({
                 "role": "assistant",
                 "content": answer,
             })
 
-            # 保存不包含 system 提示词的聊天记录
             chat_history.append({
                 "time": datetime.now().isoformat(timespec="seconds"),
                 "user": user_input,
@@ -132,7 +178,6 @@ while True:
             print(f"\nAI：{answer}\n")
 
         except requests.exceptions.Timeout:
-            # 请求失败时移除刚刚加入的用户消息
             messages.pop()
             print("请求超时，请检查网络后重试。\n")
 
