@@ -73,6 +73,13 @@ def ask_ai():
     return answer
 
 
+def save_history():
+    """保存聊天记录"""
+
+    with open("chat_history.json", "w", encoding="utf-8") as file:
+        json.dump(chat_history, file, ensure_ascii=False, indent=2)
+
+
 def show_history():
     """显示本次运行中的聊天记录"""
 
@@ -88,7 +95,6 @@ def show_history():
         print(f"AI：{item['assistant']}")
 
     print("\n====================\n")
-
 
 def show_help():
     """显示可用命令"""
