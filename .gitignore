@@ -4,3 +4,7 @@ chat_history.json
 __pycache__/
 *.pyc
 .vscode/
+.env
+.venv/
+__pycache__/
+chat_history.json
