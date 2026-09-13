@@ -8,3 +8,6 @@
 .DS_Store
 .env
 .venv/
+
+# Local DRC baseline: board outline intentionally pending
+docs/ai-reports/before-drc.rpt
