@@ -8,3 +8,5 @@ __pycache__/
 .venv/
 __pycache__/
 chat_history.json
+
+*.kicad_prl
