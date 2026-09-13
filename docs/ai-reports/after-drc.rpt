@@ -1,0 +1,21 @@
+** Drc report for DSP_Controller.kicad_pcb **
+** Created on 2026-09-14T01:23:04 **
+** Report includes: Errors, Warnings **
+
+** Found 1 DRC violations **
+[invalid_outline]: 电路板的外框形状有问题 (在 Edge.Cuts 层上找不到边框)
+    Local override; error
+    @(0.0000 mm, 0.0000 mm): PCB
+
+** Found 0 unconnected pads **
+
+** Found 0 Footprint errors **
+
+** Ignored checks **
+    - Footprint has no courtyard defined
+    - Track endpoint not centered on via
+    - Tuning profile track geometries
+    - Footprint doesn't match symbol's footprint filters
+    - Footprint component type doesn't match footprint pads
+
+** End of Report **
