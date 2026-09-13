@@ -1,13 +1,10 @@
-# KiCad lock files
-*.lck
-
-# KiCad local user settings
-*.kicad_prl
-
-# macOS
-.DS_Store
+.env
+chat_history.json
+.venv/
+__pycache__/
+*.pyc
+.vscode/
 .env
 .venv/
-
-# Local DRC baseline: board outline intentionally pending
-docs/ai-reports/before-drc.rpt
+__pycache__/
+chat_history.json
